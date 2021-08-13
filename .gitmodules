@@ -1,3 +1,3 @@
 [submodule "mozilla-ca"]
 	path = mozilla-ca
-	url = https://__GIT_DOMAIN__/Achi-Coin/mozilla-ca.git
+	url = https://github.com/Achi-Coin/mozilla-ca.git
