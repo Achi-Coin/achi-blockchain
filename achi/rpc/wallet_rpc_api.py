@@ -940,7 +940,7 @@ class WalletRpcApi:
                 timelord_reward_amount += calculate_timelord_reward(height)
             amount += record.amount
 
-        assert amount == timelord_reward_amount + pool_reward_amount + farmer_reward_amount + fee_amount
+        assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
             "timelord_reward_amount": timelord_reward_amount,
