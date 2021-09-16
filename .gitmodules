@@ -1,3 +1,6 @@
 [submodule "mozilla-ca"]
 	path = mozilla-ca
 	url = https://github.com/Achi-Coin/mozilla-ca.git
+[submodule "achi-blockchain-gui"]
+	path = achi-blockchain-gui
+	url = https://github.com/Achi-Coin/achi-blockchain-gui.git

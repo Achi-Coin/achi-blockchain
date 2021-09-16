@@ -39,6 +39,7 @@ from achi.util.generator_tools import (
 )
 from achi.util.hash import std_hash
 from achi.util.ints import uint32, uint64, uint128
+from achi.consensus.checkpoints_validation import validate_checkpoints
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +66,11 @@ async def validate_block_body(
     """
     if isinstance(block, FullBlock):
         assert height == block.height
+
+    err = validate_checkpoints(block, height)
+    if not err is None:
+        return err, None
+
     prev_transaction_block_height: uint32 = uint32(0)
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must

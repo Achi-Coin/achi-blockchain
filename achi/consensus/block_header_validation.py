@@ -30,6 +30,7 @@ from achi.types.unfinished_header_block import UnfinishedHeaderBlock
 from achi.util.errors import Err, ValidationError
 from achi.util.hash import std_hash
 from achi.util.ints import uint8, uint32, uint64, uint128
+from achi.consensus.checkpoints_validation import validate_checkpoints
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ def validate_unfinished_header_block(
     skip_overflow_last_ss_validation must be set to True. This will skip validation of end of slots, sub-epochs,
     and lead to other small tweaks in validation.
     """
+
     # 1. Check that the previous block exists in the blockchain, or that it is correct
 
     prev_b = blocks.try_block_record(header_block.prev_header_hash)
@@ -97,6 +99,12 @@ def validate_unfinished_header_block(
         else:
             can_finish_se = False
             can_finish_epoch = False
+
+    # 1.5 Validate checkpoints
+
+    err = validate_checkpoints(header_block, height)
+    if not err is None:
+        return None, ValidationError(err)
 
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: Optional[bytes32] = None
@@ -837,6 +845,13 @@ def validate_finished_header_block(
     Fully validates the header of a block. A header block is the same  as a full block, but
     without transactions and transaction info. Returns (required_iters, error).
     """
+
+    # 0. Validate checkpoints
+
+    err = validate_checkpoints(header_block, header_block.height)
+    if not err is None:
+        return None, ValidationError(err)
+
     unfinished_header_block = UnfinishedHeaderBlock(
         header_block.finished_sub_slots,
         header_block.reward_chain_block.get_unfinished(),
