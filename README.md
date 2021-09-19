@@ -16,9 +16,9 @@
     <br>    
     📒 <a href="https://achicoin.org/faq/">FAQ</a>
     <br>
-    🧠 <a href="https://achicoin.org/achipedia">Achipedia</a>
+    🧠 <a href="https://achicoin.org/achipedia/">Achipedia</a>
     <br>
-    🔗 <a href="https://achicoin.org/achiuniverse">AchiUniverse</a>    
+    🔗 <a href="https://achicoin.org/universe/">AchiUniverse</a>    
     <br>
     🐦 <a href="https://twitter.com/Achi_Coin">Twitter</a>
     <br>
