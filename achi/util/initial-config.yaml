@@ -20,9 +20,9 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
   config:
     mainnet:
-      address_prefix: "xach"
+      address_prefix: "ach"
     testnet0:
-      address_prefix: "txach"
+      address_prefix: "tach"
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.achicoin.org/notify/mainnet_alert.txt

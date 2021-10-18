@@ -64,17 +64,17 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-a", "--amount", help="How much achi to send, in XACH", type=str, required=True)
+@click.option("-a", "--amount", help="How much achi to send, in ACH", type=str, required=True)
 @click.option(
     "-m",
     "--fee",
-    help="Set the fees for the transaction, in XACH",
+    help="Set the fees for the transaction, in ACH",
     type=str,
     default="0",
     show_default=True,
     required=True,
 )
-@click.option("-t", "--address", help="Address to send the XACH", type=str, required=True)
+@click.option("-t", "--address", help="Address to send the ACH", type=str, required=True)
 def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str) -> None:
     extra_params = {"id": id, "amount": amount, "fee": fee, "address": address}
     import asyncio

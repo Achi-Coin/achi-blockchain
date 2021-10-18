@@ -20,6 +20,7 @@ from achi.util.ints import uint32
 from achi.util.keychain import Keychain
 from achi.util.path import mkdir
 from achi.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
+from achi.util.bech32m import decode_puzzle_hash
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
@@ -46,6 +47,39 @@ def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict
             updated[k] = v
 
 
+def migrate_address(legacy_address: str, prefix: str):
+    return encode_puzzle_hash(decode_puzzle_hash(legacy_address), prefix)
+
+
+def migrate_prefix(new_root: Path) -> None:
+    config: Dict = load_config(new_root, "config.yaml")
+
+    prefix = "ach"
+
+    config["network_overrides"]["config"]["mainnet"]["address_prefix"] = prefix
+    config["network_overrides"]["config"]["testnet0"]["address_prefix"] = "t" + prefix
+
+    actual_farmer = "ach_target_address" in config["farmer"]
+    actual_pool = "ach_target_address" in config["pool"]
+    
+    legacy_farmer = "xach_target_address" in config["farmer"]
+    legacy_pool = "xach_target_address" in config["pool"]
+
+    if actual_farmer and actual_pool:
+        return
+
+    if not (legacy_farmer and legacy_pool):
+        return
+
+    config["farmer"]["ach_target_address"] = migrate_address(config["farmer"].get("xach_target_address"), prefix)
+    config["pool"]["ach_target_address"] = migrate_address(config["pool"].get("xach_target_address"), prefix)
+
+    print("Migrating the farmer destination address to %s" % config["farmer"]["ach_target_address"])
+    print("Migrating the pool destination address to %s" % config["pool"]["ach_target_address"])
+
+    save_config(new_root, "config.yaml", config)
+    
+
 def check_keys(new_root: Path) -> None:
     keychain: Keychain = Keychain()
     all_sks = keychain.get_all_private_keys()
@@ -53,11 +87,13 @@ def check_keys(new_root: Path) -> None:
         print("No keys are present in the keychain. Generate them with 'achi keys generate'")
         return None
 
+    migrate_prefix(new_root)
+
     config: Dict = load_config(new_root, "config.yaml")
     pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
     all_targets = []
-    stop_searching_for_farmer = "xach_target_address" not in config["farmer"]
-    stop_searching_for_pool = "xach_target_address" not in config["pool"]
+    stop_searching_for_farmer = "ach_target_address" not in config["farmer"]
+    stop_searching_for_pool = "ach_target_address" not in config["pool"]
     number_of_ph_to_search = 500
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
@@ -68,32 +104,32 @@ def check_keys(new_root: Path) -> None:
             all_targets.append(
                 encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix)
             )
-            if all_targets[-1] == config["farmer"].get("xach_target_address"):
+            if all_targets[-1] == config["farmer"].get("ach_target_address"):
                 stop_searching_for_farmer = True
-            if all_targets[-1] == config["pool"].get("xach_target_address"):
+            if all_targets[-1] == config["pool"].get("ach_target_address"):
                 stop_searching_for_pool = True
 
     # Set the destinations
-    if "xach_target_address" not in config["farmer"]:
-        print(f"Setting the xach destination address for coinbase fees reward to {all_targets[0]}")
-        config["farmer"]["xach_target_address"] = all_targets[0]
-    elif config["farmer"]["xach_target_address"] not in all_targets:
+    if "ach_target_address" not in config["farmer"]:
+        print(f"Setting the ach destination address for coinbase fees reward to {all_targets[0]}")
+        config["farmer"]["ach_target_address"] = all_targets[0]
+    elif config["farmer"]["ach_target_address"] not in all_targets:
         print(
             f"WARNING: using a farmer address which we don't have the private"
             f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
-            f"{config['farmer']['xach_target_address']} with {all_targets[0]}"
+            f"{config['farmer']['ach_target_address']} with {all_targets[0]}"
         )
 
     if "pool" not in config:
         config["pool"] = {}
-    if "xach_target_address" not in config["pool"]:
-        print(f"Setting the xach destination address for coinbase reward to {all_targets[0]}")
-        config["pool"]["xach_target_address"] = all_targets[0]
-    elif config["pool"]["xach_target_address"] not in all_targets:
+    if "ach_target_address" not in config["pool"]:
+        print(f"Setting the ach destination address for coinbase reward to {all_targets[0]}")
+        config["pool"]["ach_target_address"] = all_targets[0]
+    elif config["pool"]["ach_target_address"] not in all_targets:
         print(
             f"WARNING: using a pool address which we don't have the private"
             f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
-            f"{config['pool']['xach_target_address']} with {all_targets[0]}"
+            f"{config['pool']['ach_target_address']} with {all_targets[0]}"
         )
 
     # Set the pool pks in the farmer
