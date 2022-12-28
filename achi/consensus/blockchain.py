@@ -18,6 +18,7 @@ from achi.consensus.full_block_to_block_record import block_to_block_record
 from achi.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from achi.full_node.block_store import BlockStore
 from achi.full_node.coin_store import CoinStore
+from achi.full_node.staker_store import StakerStore
 from achi.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from achi.types.blockchain_format.coin import Coin
 from achi.types.blockchain_format.sized_bytes import bytes32
@@ -35,6 +36,7 @@ from achi.util.errors import Err
 from achi.util.generator_tools import get_block_header, tx_removals_and_additions
 from achi.util.ints import uint16, uint32, uint64, uint128
 from achi.util.streamable import recurse_jsonify
+from achi.types.staker_winner import StakerWinner
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +72,8 @@ class Blockchain(BlockchainInterface):
     __sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
     # Unspent Store
     coin_store: CoinStore
+    # Staker store
+    staker_store: StakerStore
     # Store
     block_store: BlockStore
     # Used to verify blocks in parallel
@@ -88,6 +92,7 @@ class Blockchain(BlockchainInterface):
     async def create(
         coin_store: CoinStore,
         block_store: BlockStore,
+        staker_store: StakerStore,
         consensus_constants: ConsensusConstants,
     ):
         """
@@ -107,6 +112,7 @@ class Blockchain(BlockchainInterface):
 
         self.constants = consensus_constants
         self.coin_store = coin_store
+        self.staker_store = staker_store
         self.block_store = block_store
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self._shut_down = False
@@ -236,6 +242,7 @@ class Blockchain(BlockchainInterface):
             self,
             self.block_store,
             self.coin_store,
+            self.staker_store,
             self.get_peak(),
             block,
             block.height,
@@ -308,6 +315,7 @@ class Blockchain(BlockchainInterface):
                 else:
                     tx_removals, tx_additions = [], []
                 await self.coin_store.new_block(block, tx_additions, tx_removals)
+                await self.staker_store.new_block(block, tx_additions, tx_removals)
                 await self.block_store.set_peak(block_record.header_hash)
                 return uint32(0), uint32(0), [block_record]
             return None, None, []
@@ -325,6 +333,7 @@ class Blockchain(BlockchainInterface):
 
             if block_record.prev_hash != peak.header_hash:
                 await self.coin_store.rollback_to_block(fork_height)
+                await self.staker_store.rollback_to_block(fork_height)
             # Rollback sub_epoch_summaries
             heights_to_delete = []
             for ses_included_height in self.__sub_epoch_summaries.keys():
@@ -360,6 +369,7 @@ class Blockchain(BlockchainInterface):
                     else:
                         tx_removals, tx_additions = await self.get_tx_removals_and_additions(fetched_full_block, None)
                     await self.coin_store.new_block(fetched_full_block, tx_additions, tx_removals)
+                    await self.staker_store.new_block(fetched_full_block, tx_additions, tx_removals)
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
@@ -529,6 +539,7 @@ class Blockchain(BlockchainInterface):
             self,
             self.block_store,
             self.coin_store,
+            self.staker_store,
             self.get_peak(),
             block,
             uint32(prev_height + 1),
@@ -816,3 +827,7 @@ class Blockchain(BlockchainInterface):
                     result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
         assert len(result) == len(ref_list)
         return BlockGenerator(block.transactions_generator, result)
+
+    def get_staker_winner(self, header_hash: bytes32, height: uint32) -> Optional[StakerWinner]:
+        return self.staker_store.get_winner_record_sync(header_hash, height)
+

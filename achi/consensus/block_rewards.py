@@ -28,6 +28,9 @@ timelord_fraction = 0.02 / 100
 pool_fraction = 7 / 8
 farmer_fraction = 1 / 8
 
+staking_rules = [(period5 * _blocks_per_day, 1_000_000.0),
+                (period6 * _blocks_per_day, 1_000_000.0), 
+                (period7 * _blocks_per_day, 1_000_000.0)]
 
 def calculate_timelord_reward(height: uint32) -> uint64:
     if height == 0:
@@ -45,11 +48,21 @@ def calculate_timelord_reward(height: uint32) -> uint64:
     elif height < period6 * _blocks_per_day:
         return uint64(int(timelord_fraction * reward6 * _sten_per_achi))
     elif height < period7 * _blocks_per_day:
-        return uint64(int(timelord_fraction * reward7 * _sten_per_achi))
+        return uint64(int(1 * _sten_per_achi))
     elif height < period8 * _blocks_per_day:
-        return uint64(int(timelord_fraction * reward8 * _sten_per_achi))
+        return uint64(int(1 * _sten_per_achi))
     else:
-        return uint64(int(timelord_fraction * reward9 * _sten_per_achi))
+        return uint64(int(1 * _sten_per_achi))
+
+def calculate_staker_reward(height: uint32) -> uint64:
+    if height < period6 * _blocks_per_day:
+        return uint64(0)
+    elif height < period7 * _blocks_per_day:
+        return uint64(int(16 * _sten_per_achi))
+    elif height < period8 * _blocks_per_day:
+        return uint64(int(32 * _sten_per_achi))
+    else:
+        return uint64(int(64 * _sten_per_achi))
 
 
 def calculate_pool_reward(height: uint32) -> uint64:
@@ -68,11 +81,11 @@ def calculate_pool_reward(height: uint32) -> uint64:
     elif height < period6 * _blocks_per_day:
         return uint64(int(pool_fraction * reward6 * _sten_per_achi)) - calculate_timelord_reward(height)
     elif height < period7 * _blocks_per_day:
-        return uint64(int(pool_fraction * reward7 * _sten_per_achi)) - calculate_timelord_reward(height)
+        return uint64(int(pool_fraction * (reward7 * _sten_per_achi - calculate_staker_reward(height)))) - calculate_timelord_reward(height)
     elif height < period8 * _blocks_per_day:
-        return uint64(int(pool_fraction * reward8 * _sten_per_achi)) - calculate_timelord_reward(height)
+        return uint64(int(pool_fraction * (reward8 * _sten_per_achi - calculate_staker_reward(height)))) - calculate_timelord_reward(height)
     else:
-        return uint64(int(pool_fraction * reward9 * _sten_per_achi)) - calculate_timelord_reward(height)
+        return uint64(int(pool_fraction * (reward9 * _sten_per_achi - calculate_staker_reward(height)))) - calculate_timelord_reward(height)
 
 
 def calculate_base_farmer_reward(height: uint32) -> uint64:
@@ -91,8 +104,8 @@ def calculate_base_farmer_reward(height: uint32) -> uint64:
     elif height < period6 * _blocks_per_day:
         return uint64(int(farmer_fraction * reward6 * _sten_per_achi))
     elif height < period7 * _blocks_per_day:
-        return uint64(int(farmer_fraction * reward7 * _sten_per_achi))
+        return uint64(int(farmer_fraction * (reward7 * _sten_per_achi - calculate_staker_reward(height))))
     elif height < period8 * _blocks_per_day:
-        return uint64(int(farmer_fraction * reward8 * _sten_per_achi))
+        return uint64(int(farmer_fraction * (reward8 * _sten_per_achi - calculate_staker_reward(height))))
     else:
-        return uint64(int(farmer_fraction * reward9 * _sten_per_achi))
+        return uint64(int(farmer_fraction * (reward9 * _sten_per_achi - calculate_staker_reward(height))))

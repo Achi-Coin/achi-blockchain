@@ -7,11 +7,11 @@ from achibip158 import PyBIP158
 from alvm.casts import int_from_bytes
 
 from achi.consensus.block_record import BlockRecord
-from achi.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward, calculate_timelord_reward
+from achi.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward, calculate_timelord_reward, calculate_staker_reward
 from achi.consensus.block_root_validation import validate_block_merkle_roots
 from achi.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from achi.consensus.blockchain_interface import BlockchainInterface
-from achi.consensus.coinbase import create_farmer_coin, create_pool_coin, create_timelord_coin
+from achi.consensus.coinbase import create_farmer_coin, create_pool_coin, create_timelord_coin, create_staker_coin
 from achi.consensus.constants import ConsensusConstants
 from achi.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from achi.consensus.find_fork_point import find_fork_point_in_chain
@@ -40,6 +40,7 @@ from achi.util.generator_tools import (
 from achi.util.hash import std_hash
 from achi.util.ints import uint32, uint64, uint128
 from achi.consensus.checkpoints_validation import validate_checkpoints
+from achi.full_node.staker_store import StakerStore
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ async def validate_block_body(
     blocks: BlockchainInterface,
     block_store: BlockStore,
     coin_store: CoinStore,
+    staker_store: StakerStore,
     peak: Optional[BlockRecord],
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
@@ -120,6 +122,7 @@ async def validate_block_body(
         prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
         prev_transaction_block_height = prev_transaction_block.height
         assert prev_transaction_block.fees is not None
+        
         timelord_coin = create_timelord_coin(
             prev_transaction_block_height,
             prev_transaction_block.timelord_puzzle_hash,
@@ -138,10 +141,24 @@ async def validate_block_body(
             uint64(calculate_base_farmer_reward(prev_transaction_block.height) + prev_transaction_block.fees),
             constants.GENESIS_CHALLENGE,
         )
+
+        staker_coin = None
+
+        rec = staker_store.get_winner_record_sync(prev_transaction_block.header_hash, prev_transaction_block.height)
+        if not rec is None:
+            staker_coin = create_staker_coin(
+                prev_transaction_block_height,
+                rec.puzzle_hash,
+                uint64(calculate_staker_reward(height)),
+                constants.GENESIS_CHALLENGE,
+            )
+
         # Adds the previous block
         expected_reward_coins.add(timelord_coin)
         expected_reward_coins.add(pool_coin)
         expected_reward_coins.add(farmer_coin)
+        if not staker_coin is None:
+            expected_reward_coins.add(staker_coin)
 
         # For the second block in the chain, don't go back further
         if prev_transaction_block.height > 0:
@@ -171,6 +188,18 @@ async def validate_block_body(
                         constants.GENESIS_CHALLENGE,
                     )
                 )
+
+                rec = staker_store.get_winner_record_sync(curr_b.header_hash, curr_b.height)
+                if not rec is None:
+                    expected_reward_coins.add(create_staker_coin(
+                            curr_b.height,
+                            rec.puzzle_hash,
+                            uint64(calculate_staker_reward(height)),
+                            constants.GENESIS_CHALLENGE,
+                        )
+                    )
+
+
                 curr_b = blocks.block_record(curr_b.prev_hash)
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:

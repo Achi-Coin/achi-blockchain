@@ -8,9 +8,9 @@ from blspy import G1Element, G2Element
 from achibip158 import PyBIP158
 
 from achi.consensus.block_record import BlockRecord
-from achi.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward, calculate_timelord_reward
+from achi.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward, calculate_timelord_reward, calculate_staker_reward
 from achi.consensus.blockchain_interface import BlockchainInterface
-from achi.consensus.coinbase import create_farmer_coin, create_pool_coin, create_timelord_coin
+from achi.consensus.coinbase import create_farmer_coin, create_pool_coin, create_timelord_coin, create_staker_coin
 from achi.consensus.constants import ConsensusConstants
 from achi.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from achi.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -167,8 +167,22 @@ def create_foliage(
                 uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
                 constants.GENESIS_CHALLENGE,
             )
+
+            staker_coin = None
+
+            rec = blocks.get_staker_winner(curr.header_hash, curr.height)
+            if not rec is None:
+                staker_coin = create_staker_coin(
+                    curr.height,
+                    rec.puzzle_hash,
+                    uint64(calculate_staker_reward(height)),
+                    constants.GENESIS_CHALLENGE,
+                )
             assert curr.header_hash == prev_transaction_block.header_hash
             reward_claims_incorporated += [timelord_coin, pool_coin, farmer_coin]
+
+            if not staker_coin is None:
+                reward_claims_incorporated += [staker_coin, ]
 
             if curr.height > 0:
                 curr = blocks.block_record(curr.prev_hash)
@@ -192,7 +206,23 @@ def create_foliage(
                         calculate_base_farmer_reward(curr.height),
                         constants.GENESIS_CHALLENGE,
                     )
+
+                    staker_coin = None
+
+                    rec = blocks.get_staker_winner(curr.header_hash, curr.height)
+                    if not rec is None:
+                        staker_coin = create_staker_coin(
+                            curr.height,
+                            rec.puzzle_hash,
+                            uint64(calculate_staker_reward(height)),
+                            constants.GENESIS_CHALLENGE,
+                        )
+
                     reward_claims_incorporated += [timelord_coin, pool_coin, farmer_coin]
+
+                    if not staker_coin is None:
+                        reward_claims_incorporated += [staker_coin, ]
+
                     curr = blocks.block_record(curr.prev_hash)
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:

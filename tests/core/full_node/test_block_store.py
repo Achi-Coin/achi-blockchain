@@ -11,6 +11,7 @@ from achi.full_node.block_store import BlockStore
 from achi.full_node.coin_store import CoinStore
 from achi.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
+from achi.consensus.block_rewards import staking_rules
 
 
 @pytest.fixture(scope="module")
@@ -41,7 +42,8 @@ class TestBlockStore:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants)
+        staker_store_2 = await StakerStore.create(db_wrapper_2,staking_rules) 
+        bc = await Blockchain.create(coin_store_2, store_2, staker_store_2, test_constants)
 
         store = await BlockStore.create(db_wrapper)
         await BlockStore.create(db_wrapper_2)
@@ -105,7 +107,8 @@ class TestBlockStore:
         store = await BlockStore.create(wrapper)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants)
+        staker_store_2 = await StakerStore.create(wrapper_2, staking_rules) 
+        bc = await Blockchain.create(coin_store_2, store_2, staker_store_2, test_constants)
         block_records = []
         for block in blocks:
             await bc.receive_block(block)

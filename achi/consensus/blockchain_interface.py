@@ -7,9 +7,13 @@ from achi.types.blockchain_format.vdf import VDFInfo
 from achi.types.header_block import HeaderBlock
 from achi.types.weight_proof import SubEpochChallengeSegment
 from achi.util.ints import uint32
+from achi.types.staker_winner import StakerWinner
 
 
 class BlockchainInterface:
+    def get_staker_winner(self, header_hash: bytes32, height: uint32) -> Optional[StakerWinner]:
+        pass
+
     def get_peak_height(self) -> Optional[uint32]:
         pass
 

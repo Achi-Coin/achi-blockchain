@@ -14,6 +14,7 @@ from achi.types.full_block import FullBlock
 from achi.util.db_wrapper import DBWrapper
 from achi.util.path import mkdir
 from tests.setup_nodes import bt, test_constants
+from achi.consensus.block_rewards import staking_rules
 
 
 async def create_blockchain(constants: ConsensusConstants):
@@ -24,7 +25,8 @@ async def create_blockchain(constants: ConsensusConstants):
     wrapper = DBWrapper(connection)
     coin_store = await CoinStore.create(wrapper)
     store = await BlockStore.create(wrapper)
-    bc1 = await Blockchain.create(coin_store, store, constants)
+    staker_store = await StakerStore.create(db_wrapper,staking_rules)    
+    bc1 = await Blockchain.create(coin_store, store, staker_store, constants)
     assert bc1.get_peak() is None
     return bc1, connection, db_path
 

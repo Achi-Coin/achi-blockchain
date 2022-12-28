@@ -57,6 +57,8 @@ from achi.util.ints import uint8, uint32, uint64, uint128
 from achi.util.path import mkdir, path_from_root
 from achi.util.safe_cancel_task import cancel_task_safe
 from achi.util.profiler import profile_task
+from achi.consensus.block_rewards import staking_rules
+from achi.full_node.staker_store import StakerStore
 
 
 class FullNode:
@@ -122,9 +124,15 @@ class FullNode:
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.db_wrapper)
+        self.staker_store = await StakerStore.create(self.db_wrapper, staking_rules)
+
+        self.log.info("Initializing stakers from disk")
+        await self.staker_store.load()
+
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
-        self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
+        self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.staker_store,
+            self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         self.weight_proof_handler = None
         asyncio.create_task(self.initialize_weight_proof())

@@ -21,7 +21,7 @@ from achi.util.ints import uint64, uint32
 from achi.util.wallet_tools import WalletTool
 from achi.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
-
+from achi.consensus.block_rewards import staking_rules
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -241,7 +241,8 @@ class TestCoinStore:
             db_wrapper = DBWrapper(connection)
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
+            staker_store = await StakerStore.create(db_wrapper, staking_rules) 
+            b: Blockchain = await Blockchain.create(coin_store, store, staker_store, test_constants)
             try:
 
                 for block in blocks:
@@ -312,7 +313,8 @@ class TestCoinStore:
             db_wrapper = DBWrapper(connection)
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
+            staker_store = await StakerStore.create(db_wrapper, staking_rules) 
+            b: Blockchain = await Blockchain.create(coin_store, store, staker_store, test_constants)
             for block in blocks:
                 res, err, _ = await b.receive_block(block)
                 assert err is None

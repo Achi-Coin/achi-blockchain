@@ -25,6 +25,7 @@ from achi.wallet.block_record import HeaderBlockRecord
 from achi.wallet.wallet_block_store import WalletBlockStore
 from achi.wallet.wallet_coin_store import WalletCoinStore
 from achi.wallet.wallet_transaction_store import WalletTransactionStore
+from achi.types.staker_winner import StakerWinner
 
 log = logging.getLogger(__name__)
 
@@ -451,3 +452,7 @@ class WalletBlockchain(BlockchainInterface):
         if block_record.height not in self.__heights_in_cache.keys():
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
+
+    def get_staker_winner(self, header_hash: bytes32, height: uint32) -> Optional[StakerWinner]:
+        log.info(f"wallet get_staker_winner {height}")
+        return None
